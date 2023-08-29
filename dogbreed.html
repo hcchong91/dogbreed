@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vue.js Dog Breeds App</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vue-router@3.5.2/dist/vue-router.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios@0.24.0/dist/axios.min.js"></script>
+  <style>
+    body {
+      font-family: 'Roboto', sans-serif;
+    }
+    ul {
+      display: flex;
+      flex-wrap: wrap;
+      list-style: none;
+      padding: 0;
+      margin: 0 -5px;
+    }
+    ul li {
+      padding: 10px;
+      border-radius: 5px;
+      border: 1px solid #000;
+      cursor: pointer;
+      margin: 5px;
+      transition: .3s ease-in-out;
+    }
+    ul li:hover {
+      background: black;
+      color: white;
+    }
+    h1.title {
+      text-align: center;
+    }
+    .index {
+      position: sticky;
+      top: 0;
+      display: flex;
+      justify-content: space-around;
+      background: black;
+      padding: 10px;
+      border: 1px solid;
+      color: white;
+    }
+    #app {
+      max-width: 1170px;
+      padding: 0 15px;
+      margin: 0 auto;
+    }
+    .index a {
+      text-decoration: none;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <router-link to="/">Home</router-link>
+    <router-view></router-view>
+  </div>
+
+  <script>
+    const apiUrl = "https://api.thedogapi.com/v1/breeds";
+    const apiKey = "live_NaWzI7714jzMFzxXMFS16OoBqHXGSyTSY9mOq3jMJnstIrh21Sj2fSqPCP0AEQ5l";
+
+    const BreedsList = {
+      template: `
+        <div>
+          <h1 class="title">Dog Breeds</h1>
+          <div class="index">Index: <a v-for="(breeds, section) in alphabetSections" :key="section" :href="'#char-' + section">{{ section }}</a></div>
+          <div v-for="(breeds, section) in alphabetSections" :key="section">
+            <h2 :id="'char-' + section">{{ section }}</h2>
+            <ul>
+              <li v-for="breed in breeds" :key="breed.id" @click="showBreedDetails(breed.id)">
+                {{ breed.name }}
+              </li>
+            </ul>
+          </div>
+        </div>
+      `,
+      data() {
+        return {
+          breeds: []
+        };
+      },
+      methods: {
+        async fetchBreeds() {
+          try {
+            const response = await axios.get(
+              apiUrl,
+              {
+                headers: {
+                  "x-api-key": apiKey
+                }
+              }
+            );
+            this.breeds = response.data;
+          } catch (error) {
+            console.error("Error fetching breeds:", error);
+          }
+        },
+        showBreedDetails(breedId) {
+          this.$router.push(`/breeds/${breedId}`);
+        }
+      },
+      mounted() {
+        this.fetchBreeds();
+      },
+      computed: {
+        alphabetSections() {
+          const sections = {};
+          this.breeds.forEach(breed => {
+            const firstLetter = breed.name.charAt(0).toUpperCase();
+            if (!sections[firstLetter]) {
+              sections[firstLetter] = [];
+            }
+            sections[firstLetter].push(breed);
+          });
+          return sections;
+        }
+      }
+    };
+
+    const BreedDetails = {
+      template: `
+        <div>
+          <h1>{{ breed.name }}</h1>
+          <p>Weight: {{ breed.weight?.imperial }} pounds</p>
+          <p>Height: {{ breed.height?.imperial }} inches</p>
+          <p v-if="breed.life_span">Life Span: {{ breed.life_span }}</p>
+          <p v-if="breed.bred_for">Breed For: {{ breed.bred_for }}</p>
+          <p v-if="breed.breed_group">Breed Group: {{ breed.breed_group }}</p>
+          <p v-if="breed.temperament">Temperament: {{ breed.temperament }}</p>
+        </div>
+      `,
+      data() {
+        return {
+          breed: {}
+        };
+      },
+      async created() {
+        try {
+          const breedId = this.$route.params.breedId;
+          const response = await axios.get(
+            `${ apiUrl }/${ breedId }`,
+            {
+              headers: {
+                "x-api-key": apiKey
+              }
+            }
+          );
+          this.breed = response.data || {};
+        } catch (error) {
+          console.error("Error fetching breed details:", error);
+        }
+      }
+    };
+
+    const routes = [
+      { path: '/', component: BreedsList },
+      { path: '/breeds/:breedId', component: BreedDetails }
+    ];
+
+    const router = new VueRouter({
+      routes
+    });
+
+    new Vue({
+      el: '#app',
+      router
+    });
+  </script>
+</body>
+</html>
